@@ -1,5 +1,7 @@
 package com.knight.knight.muzic.model;
 
+import android.graphics.Bitmap;
+
 /**
  * Created by kn1gh7 on 9/4/16.
  */
@@ -7,6 +9,15 @@ public class MusicItemModel {
     String title;
     String displayName;
     String albumName;
+    String albumId;
+
+    public String getAlbumId() {
+        return albumId;
+    }
+
+    public void setAlbumId(String albumId) {
+        this.albumId = albumId;
+    }
 
     public String getImagePath() {
         return imagePath;

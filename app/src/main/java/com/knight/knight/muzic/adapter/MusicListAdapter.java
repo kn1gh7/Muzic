@@ -60,15 +60,12 @@ public class MusicListAdapter extends RecyclerView.Adapter<MusicListViewHolder> 
                     musicList.get(lastPlayingPosition).setPlaying(false);
                     MusicListAdapter.this.notifyItemChanged(lastPlayingPosition);
                 }
-                if (position != lastPlayingPosition) {
+                if (position != lastPlayingPosition)
                     musicItem.setPlaying(!musicItem.isPlaying());
-                    lastPlayingPosition = INVALID_POSITION;
-                } else {
-                    lastPlayingPosition = position;
-                }
+
+                lastPlayingPosition = position;
                 startMusicCallback.onMusicItemClicked(musicItem.getAlbumId());
                 MusicListAdapter.this.notifyItemChanged(position);
-
             }
         });
 

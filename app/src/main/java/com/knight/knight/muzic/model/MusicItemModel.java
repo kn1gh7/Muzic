@@ -10,6 +10,15 @@ public class MusicItemModel {
     String displayName;
     String albumName;
     String albumId;
+    boolean isPlaying;
+
+    public boolean isPlaying() {
+        return isPlaying;
+    }
+
+    public void setPlaying(boolean playing) {
+        isPlaying = playing;
+    }
 
     public String getAlbumId() {
         return albumId;

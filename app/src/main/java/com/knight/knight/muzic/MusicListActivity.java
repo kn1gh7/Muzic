@@ -122,10 +122,10 @@ public class MusicListActivity extends AppCompatActivity implements MusicItemCli
             Uri uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
             mediaPlayer.setDataSource(getApplicationContext(), Uri.parse(uri + "/" + musicID));
             mediaPlayer.prepare();
+            mediaPlayer.start();
         } catch (IOException e) {
             e.printStackTrace();
         }
-        mediaPlayer.start();
     }
 
     @Override

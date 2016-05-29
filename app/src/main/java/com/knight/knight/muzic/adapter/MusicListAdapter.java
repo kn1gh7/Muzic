@@ -24,14 +24,17 @@ import java.util.List;
  * Created by kn1gh7 on 9/4/16.
  */
 public class MusicListAdapter extends RecyclerView.Adapter<MusicListViewHolder> {
+    private static final int INVALID_POSITION = -1;
     Context context;
     MusicItemClicked startMusicCallback;
     List<MusicItemModel> musicList;
+    int lastPlayingPosition;
 
     public MusicListAdapter(Context context, MusicItemClicked startMusicCallback, List<MusicItemModel> musicList) {
         this.context = context;
         this.musicList = musicList;
         this.startMusicCallback = startMusicCallback;
+        lastPlayingPosition = INVALID_POSITION;
     }
 
     @Override
@@ -43,23 +46,36 @@ public class MusicListAdapter extends RecyclerView.Adapter<MusicListViewHolder> 
     }
 
     @Override
-    public void onBindViewHolder(MusicListViewHolder holder, int position) {
+    public void onBindViewHolder(final MusicListViewHolder holder, final int position) {
         final MusicItemModel musicItem = musicList.get(position);
         holder.title.setText(musicItem.getTitle());
         holder.displayName.setText(musicItem.getDisplayName());
         holder.albumName.setText(musicItem.getAlbumName());
+        holder.music_item_parent.setActivated(musicItem.isPlaying());
 
         holder.music_item_parent.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                if (lastPlayingPosition != INVALID_POSITION) {
+                    musicList.get(lastPlayingPosition).setPlaying(false);
+                    MusicListAdapter.this.notifyItemChanged(lastPlayingPosition);
+                }
+                if (position != lastPlayingPosition) {
+                    musicItem.setPlaying(!musicItem.isPlaying());
+                    lastPlayingPosition = INVALID_POSITION;
+                } else {
+                    lastPlayingPosition = position;
+                }
                 startMusicCallback.onMusicItemClicked(musicItem.getAlbumId());
+                MusicListAdapter.this.notifyItemChanged(position);
+
             }
         });
 
         MediaMetadataRetriever mmr = new MediaMetadataRetriever();
         byte[] rawArt;
         Bitmap art;
-        BitmapFactory.Options bfo=new BitmapFactory.Options();
+        BitmapFactory.Options bfo = new BitmapFactory.Options();
 
         Uri uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
         mmr.setDataSource(context.getApplicationContext(), Uri.parse(uri + "/" + musicItem.getAlbumId()));

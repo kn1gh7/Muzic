@@ -7,6 +7,8 @@ import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.MediaStore;
+import android.support.v4.media.MediaBrowserCompat;
+import android.support.v4.media.MediaDescriptionCompat;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -27,10 +29,12 @@ public class MusicListAdapter extends RecyclerView.Adapter<MusicListViewHolder> 
     private static final int INVALID_POSITION = -1;
     Context context;
     MusicItemClicked startMusicCallback;
-    List<MusicItemModel> musicList;
+    List<MediaBrowserCompat.MediaItem> musicList;
     int lastPlayingPosition;
 
-    public MusicListAdapter(Context context, MusicItemClicked startMusicCallback, List<MusicItemModel> musicList) {
+    public MusicListAdapter(Context context,
+                            MusicItemClicked startMusicCallback,
+                            List<MediaBrowserCompat.MediaItem> musicList) {
         this.context = context;
         this.musicList = musicList;
         this.startMusicCallback = startMusicCallback;
@@ -47,13 +51,14 @@ public class MusicListAdapter extends RecyclerView.Adapter<MusicListViewHolder> 
 
     @Override
     public void onBindViewHolder(final MusicListViewHolder holder, final int position) {
-        final MusicItemModel musicItem = musicList.get(position);
-        holder.title.setText(musicItem.getTitle());
-        holder.displayName.setText(musicItem.getDisplayName());
-        holder.albumName.setText(musicItem.getAlbumName());
-        holder.music_item_parent.setActivated(musicItem.isPlaying());
+        final MediaBrowserCompat.MediaItem musicItem = musicList.get(position);
+        MediaDescriptionCompat mDescription = musicItem.getDescription();
+        holder.title.setText(musicItem.getDescription().getTitle());
+        holder.displayName.setText(mDescription.getDescription());
+        holder.albumName.setText(mDescription.getSubtitle());
+        //holder.music_item_parent.setActivated(musicItem.isPlayable());
 
-        holder.music_item_parent.setOnClickListener(new View.OnClickListener() {
+        /*holder.music_item_parent.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (lastPlayingPosition != INVALID_POSITION) {
@@ -67,7 +72,7 @@ public class MusicListAdapter extends RecyclerView.Adapter<MusicListViewHolder> 
                 startMusicCallback.onMusicItemClicked(musicItem.getAlbumId());
                 MusicListAdapter.this.notifyItemChanged(position);
             }
-        });
+        });*/
 
         MediaMetadataRetriever mmr = new MediaMetadataRetriever();
         byte[] rawArt;
@@ -75,7 +80,8 @@ public class MusicListAdapter extends RecyclerView.Adapter<MusicListViewHolder> 
         BitmapFactory.Options bfo = new BitmapFactory.Options();
 
         Uri uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
-        mmr.setDataSource(context.getApplicationContext(), Uri.parse(uri + "/" + musicItem.getAlbumId()));
+        mmr.setDataSource(context.getApplicationContext(),
+                Uri.parse(uri + "/" + musicItem.getDescription().getMediaId()));
         rawArt = mmr.getEmbeddedPicture();
 
         // if rawArt is null then no cover art is embedded in the file or is not

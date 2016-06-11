@@ -1,5 +1,6 @@
 package com.knight.knight.muzic;
 
+import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -9,7 +10,9 @@ import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
 import android.net.Uri;
 import android.provider.MediaStore;
+import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaMetadataCompat;
+import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
@@ -21,86 +24,55 @@ import android.widget.TextView;
 import com.knight.knight.muzic.adapter.MusicListAdapter;
 import com.knight.knight.muzic.callbackInterfaces.MusicItemClicked;
 import com.knight.knight.muzic.model.MusicItemModel;
+import com.knight.knight.muzic.service.MediaBrowserCallbackManager;
+import com.knight.knight.muzic.service.MusicBackgroundService;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MusicListActivity extends AppCompatActivity implements MusicItemClicked {
+public class MusicListActivity extends AppCompatActivity implements MusicItemClicked, MediaBrowserCallbackManager.Callback {
     MediaPlayer mediaPlayer;
-    List<MusicItemModel> musicList;
+    List<MediaBrowserCompat.MediaItem> musicList;
     MusicListAdapter musicListAdapter;
     TextView errorView;
     RecyclerView musiclist_recyclerView;
     String lastMusicID;
+    MediaBrowserCompat mBrowser;
+    MediaBrowserCallbackManager mMediaBrowserCallbackMgr;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_music_list);
-
-        musicList = new ArrayList<MusicItemModel>();
+        mMediaBrowserCallbackMgr = new MediaBrowserCallbackManager(this);
+        musicList = new ArrayList<MediaBrowserCompat.MediaItem>();
+        mBrowser = new MediaBrowserCompat(this,
+                new ComponentName(getApplicationContext(),
+                        MusicBackgroundService.class),
+                mMediaBrowserCallbackMgr.getmConnectionCallback(),
+                null);
+        mBrowser.connect();
 
         musiclist_recyclerView = (RecyclerView) findViewById(R.id.playerlistview);
         errorView = (TextView) findViewById(R.id.errorview);
 
-        musiclist_recyclerView.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false));
-        musicListAdapter = new MusicListAdapter(MusicListActivity.this, MusicListActivity.this, musicList);
+        musiclist_recyclerView.setLayoutManager(
+                new LinearLayoutManager(this,
+                        LinearLayoutManager.VERTICAL,
+                        false));
+
+        musicListAdapter = new MusicListAdapter(MusicListActivity.this,
+                MusicListActivity.this,
+                musicList);
         musiclist_recyclerView.setAdapter(musicListAdapter);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        setMusicList(musicList);
-        musicListAdapter.notifyDataSetChanged();
-
-    }
-
-    private void setMusicList(List<MusicItemModel> musicList) {
-        ContentResolver contentResolver = getContentResolver();
-
-        String selection = MediaStore.Audio.Media.IS_MUSIC + " != 0";
-        Uri uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
-        Log.i("URI", uri.toString());
-        Cursor cursor = contentResolver.query(uri, null, selection, null, null);
-        if (cursor == null) {
-            // query failed, handle error.
-            errorView.setText("Cursor returned Null");
-            errorView.setVisibility(View.VISIBLE);
-            musiclist_recyclerView.setVisibility(View.GONE);
-        } else if (!cursor.moveToFirst()) {
-            // no media on the device
-            errorView.setText("No Items Found");
-            errorView.setVisibility(View.VISIBLE);
-            musiclist_recyclerView.setVisibility(View.GONE);
-        } else {
-            musicList.clear();
-            int titleColumn = cursor.getColumnIndex(android.provider.MediaStore.Audio.Media.TITLE);
-            int idColumn = cursor.getColumnIndex(android.provider.MediaStore.Audio.Media._ID);
-            int displayNameColumn = cursor.getColumnIndex(MediaStore.Audio.Media.DISPLAY_NAME);
-            int albumNameColumn = cursor.getColumnIndex(MediaStore.Audio.Media.ALBUM);
-
-            do {
-                long thisId = cursor.getLong(idColumn);
-                String thisTitle = cursor.getString(titleColumn);
-                String displayName = cursor.getString(displayNameColumn);
-                String albumName = cursor.getString(albumNameColumn);
-                String albumID = cursor.getString(idColumn);
-                MusicItemModel musicItemModel = new MusicItemModel();
-                musicItemModel.setTitle(thisTitle);
-                musicItemModel.setDisplayName(displayName);
-                musicItemModel.setAlbumName(albumName);
-                musicItemModel.setAlbumId(albumID);
-
-                musicList.add(musicItemModel);
-                // ...process entry...
-            } while (cursor.moveToNext());
-
-            errorView.setText("");
-            errorView.setVisibility(View.GONE);
-            musiclist_recyclerView.setVisibility(View.VISIBLE);
-        }
+        if (musicListAdapter != null)
+            musicListAdapter.notifyDataSetChanged();
     }
 
     @Override
@@ -115,28 +87,27 @@ public class MusicListActivity extends AppCompatActivity implements MusicItemCli
                 lastMusicID = musicID;
             }
         }
-
-        mediaPlayer = new MediaPlayer();
-        mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
-        try {
-            Uri uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
-            mediaPlayer.setDataSource(getApplicationContext(), Uri.parse(uri + "/" + musicID));
-            mediaPlayer.prepare();
-            mediaPlayer.start();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     @Override
     protected void onPause() {
         super.onPause();
+    }
 
-        if (mediaPlayer != null && mediaPlayer.isPlaying()) {
-            mediaPlayer.stop();
-            mediaPlayer.release();
-            mediaPlayer = null;
-            lastMusicID = null;
-        }
+    @Override
+    public void onConnectedWithService() {
+        MediaSessionCompat.Token token = mBrowser.getSessionToken();
+        lastMusicID = mBrowser.getRoot();
+        mBrowser.unsubscribe(lastMusicID);
+        mBrowser.subscribe(lastMusicID,
+                mMediaBrowserCallbackMgr.getmSubscriptionCallback());
+    }
+
+    @Override
+    public void onMusicListFetched(List<MediaBrowserCompat.MediaItem> musicList) {
+        musicListAdapter = new MusicListAdapter(MusicListActivity.this,
+                MusicListActivity.this,
+                musicList);
+        musiclist_recyclerView.setAdapter(musicListAdapter);
     }
 }

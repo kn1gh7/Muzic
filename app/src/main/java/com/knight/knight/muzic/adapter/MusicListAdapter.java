@@ -58,21 +58,21 @@ public class MusicListAdapter extends RecyclerView.Adapter<MusicListViewHolder> 
         holder.albumName.setText(mDescription.getSubtitle());
         //holder.music_item_parent.setActivated(musicItem.isPlayable());
 
-        /*holder.music_item_parent.setOnClickListener(new View.OnClickListener() {
+        holder.music_item_parent.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (lastPlayingPosition != INVALID_POSITION) {
+                /*if (lastPlayingPosition != INVALID_POSITION) {
                     musicList.get(lastPlayingPosition).setPlaying(false);
                     MusicListAdapter.this.notifyItemChanged(lastPlayingPosition);
                 }
                 if (position != lastPlayingPosition)
                     musicItem.setPlaying(!musicItem.isPlaying());
 
-                lastPlayingPosition = position;
-                startMusicCallback.onMusicItemClicked(musicItem.getAlbumId());
-                MusicListAdapter.this.notifyItemChanged(position);
+                lastPlayingPosition = position;*/
+                startMusicCallback.onMusicItemClicked(musicItem.getDescription().getMediaId());
+                //MusicListAdapter.this.notifyItemChanged(position);
             }
-        });*/
+        });
 
         MediaMetadataRetriever mmr = new MediaMetadataRetriever();
         byte[] rawArt;

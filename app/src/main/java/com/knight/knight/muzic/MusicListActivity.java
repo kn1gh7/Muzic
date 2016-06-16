@@ -9,9 +9,11 @@ import android.media.AudioManager;
 import android.media.MediaMetadataRetriever;
 import android.media.MediaPlayer;
 import android.net.Uri;
+import android.os.RemoteException;
 import android.provider.MediaStore;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaMetadataCompat;
+import android.support.v4.media.session.MediaControllerCompat;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
@@ -77,30 +79,33 @@ public class MusicListActivity extends AppCompatActivity implements MusicItemCli
 
     @Override
     public void onMusicItemClicked(String musicID) {
-        if (mediaPlayer != null && mediaPlayer.isPlaying()) {
-            mediaPlayer.stop();
-            if (musicID.equals(lastMusicID)) {
-                mediaPlayer.release();
-                mediaPlayer = null;
-                return;
-            } else {
-                lastMusicID = musicID;
-            }
-        }
+        getSupportMediaController().getTransportControls().playFromMediaId(musicID, null);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
+        //getSupportMediaController().getTransportControls().pause();
     }
 
     @Override
     public void onConnectedWithService() {
         MediaSessionCompat.Token token = mBrowser.getSessionToken();
+        try {
+            setSupportMediaController(new MediaControllerCompat(MusicListActivity.this, token));
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
         lastMusicID = mBrowser.getRoot();
         mBrowser.unsubscribe(lastMusicID);
         mBrowser.subscribe(lastMusicID,
                 mMediaBrowserCallbackMgr.getmSubscriptionCallback());
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        mBrowser.disconnect();
     }
 
     @Override

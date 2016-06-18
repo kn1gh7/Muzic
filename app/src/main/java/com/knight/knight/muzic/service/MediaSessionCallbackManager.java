@@ -44,6 +44,7 @@ public class MediaSessionCallbackManager extends MediaSessionCompat.Callback {
         Log.e("MediaSessionCallbackmgr", "onPlayFromMediaId");
         super.onPlayFromMediaId(mediaId, extras);
         if (mPlayer != null && mPlayer.isPlaying()) {
+            ((PlaybackStateCallback)mContext).onPause();
             mPlayer.stop();
             if (TextUtils.equals(lastMediaID, mediaId)) {
                 mPlayer.release();
@@ -66,12 +67,14 @@ public class MediaSessionCallbackManager extends MediaSessionCompat.Callback {
                     Uri.parse(uri + "/" + mediaId));
             mPlayer.prepare();
             mPlayer.start();
+            ((PlaybackStateCallback)mContext).onPlay(mediaId);
             lastMediaID = mediaId;
             mPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
                 @Override
                 public void onCompletion(MediaPlayer mp) {
 
                     Log.e("MediaSessionCallbackmgr", "onCompletionListener");
+                    ((PlaybackStateCallback)mContext).onPause();
                     mPlayer.release();
                     mPlayer = null;
                     lastMediaID = null;
@@ -102,5 +105,9 @@ public class MediaSessionCallbackManager extends MediaSessionCompat.Callback {
         super.onStop();
     }
 
+    public interface PlaybackStateCallback {
+        void onPlay(String mediaId);
 
+        void onPause();
+    }
 }

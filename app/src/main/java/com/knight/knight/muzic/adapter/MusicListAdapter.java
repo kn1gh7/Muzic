@@ -17,7 +17,6 @@ import android.view.ViewGroup;
 
 import com.knight.knight.muzic.R;
 import com.knight.knight.muzic.callbackInterfaces.MusicItemClicked;
-import com.knight.knight.muzic.model.MusicItemModel;
 import com.knight.knight.muzic.viewholder.MusicListViewHolder;
 
 import java.util.List;

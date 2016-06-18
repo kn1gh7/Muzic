@@ -25,7 +25,6 @@ import android.widget.TextView;
 
 import com.knight.knight.muzic.adapter.MusicListAdapter;
 import com.knight.knight.muzic.callbackInterfaces.MusicItemClicked;
-import com.knight.knight.muzic.model.MusicItemModel;
 import com.knight.knight.muzic.service.MediaBrowserCallbackManager;
 import com.knight.knight.muzic.service.MusicBackgroundService;
 

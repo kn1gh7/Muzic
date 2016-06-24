@@ -22,6 +22,7 @@ public class MediaSessionCallbackManager extends MediaSessionCompat.Callback {
     MediaPlayer mPlayer;
     Context mContext;
     String lastMediaID;
+    int lastPlayingPosition;
 
     public MediaSessionCallbackManager(Context context) {
         this.mContext = context;
@@ -37,6 +38,16 @@ public class MediaSessionCallbackManager extends MediaSessionCompat.Callback {
     public void onPlayFromUri(Uri uri, Bundle extras) {
         super.onPlayFromUri(uri, extras);
         Log.e("MediaSessionCallbackmgr", "onPlayFromUri");
+    }
+
+    @Override
+    public void onPlay() {
+        if (mPlayer == null)
+            mPlayer = new MediaPlayer();
+
+        mPlayer.seekTo(lastPlayingPosition);
+        setPlayer(lastMediaID);
+        super.onPlay();
     }
 
     @Override
@@ -60,6 +71,10 @@ public class MediaSessionCallbackManager extends MediaSessionCompat.Callback {
             mPlayer = new MediaPlayer();
         }
 
+        setPlayer(mediaId);
+    }
+
+    private void setPlayer(String mediaId) {
         mPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
         try {
             Uri uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
@@ -74,7 +89,7 @@ public class MediaSessionCallbackManager extends MediaSessionCompat.Callback {
                 public void onCompletion(MediaPlayer mp) {
 
                     Log.e("MediaSessionCallbackmgr", "onCompletionListener");
-                    ((PlaybackStateCallback)mContext).onPause();
+                    ((PlaybackStateCallback)mContext).onStop();
                     mPlayer.release();
                     mPlayer = null;
                     lastMediaID = null;
@@ -84,7 +99,6 @@ public class MediaSessionCallbackManager extends MediaSessionCompat.Callback {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
 
     @Override
@@ -92,6 +106,7 @@ public class MediaSessionCallbackManager extends MediaSessionCompat.Callback {
         Log.e("MediaSessionCallbackmgr", "onPause()");
         super.onPause();
         if (mPlayer != null && mPlayer.isPlaying()) {
+            lastPlayingPosition = mPlayer.getCurrentPosition();
             mPlayer.stop();
             mPlayer.release();
             mPlayer = null;
@@ -103,11 +118,14 @@ public class MediaSessionCallbackManager extends MediaSessionCompat.Callback {
     public void onStop() {
         Log.e("MediaSessionCallbackmgr", "onStop()");
         super.onStop();
+        ((PlaybackStateCallback)mContext).onStop();
     }
 
     public interface PlaybackStateCallback {
         void onPlay(String mediaId);
 
         void onPause();
+
+        void onStop();
     }
 }

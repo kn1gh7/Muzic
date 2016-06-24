@@ -49,10 +49,8 @@ public class MusicListProvider {
             errorView.setVisibility(View.VISIBLE);
             musiclist_recyclerView.setVisibility(View.GONE);*/
             completeMusicList = null;
-        } else if (!cursor.moveToFirst()) {
-            // no media on the device
-            /*errorView.setText("No Items Found");
-            errorView.setVisibility(View.VISIBLE);
+        } else if (!cursor.moveToFirst()) { /* no media on the device errorView.setText("No Items Found");*/
+            /*errorView.setVisibility(View.VISIBLE);
             musiclist_recyclerView.setVisibility(View.GONE);*/
             completeMusicList = null;
         } else {
@@ -101,15 +99,41 @@ public class MusicListProvider {
         }
     }
 
+    List<MediaBrowserCompat.MediaItem> myPlayList;
+    boolean isListPrepared;
+
     public List<MediaBrowserCompat.MediaItem> getPlayList() {
         createMusicList();
-        List<MediaBrowserCompat.MediaItem> myPlayList = new ArrayList<>();
+        if (myPlayList != null && isListPrepared)
+            return myPlayList;
+
+        if (myPlayList == null)
+            myPlayList = new ArrayList<>();
+
         for (MediaMetadataCompat metadataCompat : completeMusicList) {
             MediaBrowserCompat.MediaItem mediaItem = new MediaBrowserCompat.MediaItem(metadataCompat.getDescription(),
                     MediaBrowserCompat.MediaItem.FLAG_PLAYABLE);
             myPlayList.add(mediaItem);
         }
+        isListPrepared = true;
         return myPlayList;
+    }
+
+    public int getIndexForMediaId(String mediaId) {
+        int indexInCurrentPlaylist = -1;
+        for (MediaBrowserCompat.MediaItem mediaItem : myPlayList) {
+            indexInCurrentPlaylist++;
+            if (mediaItem.getMediaId().equals(mediaId))
+                break;
+        }
+        return indexInCurrentPlaylist;
+    }
+
+    public MediaBrowserCompat.MediaItem getMediaItemAtIndex(int index) {
+        if (index < 0 || index >= myPlayList.size())
+            return null;
+
+        return myPlayList.get(index);
     }
 
     public MediaMetadataCompat getMetaDataForMediaId(String mediaId) {

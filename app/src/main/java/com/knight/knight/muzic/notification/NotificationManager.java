@@ -12,6 +12,7 @@ import android.graphics.Color;
 import android.media.MediaMetadataRetriever;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Handler;
 import android.os.RemoteException;
 import android.provider.MediaStore;
 import android.support.v4.app.NotificationManagerCompat;
@@ -140,31 +141,85 @@ public class NotificationManager extends BroadcastReceiver {
             // ignore if the receiver is not registered.
         }
         mService.stopForeground(true);
-
     }
+
+    int mState;
 
     private MediaControllerCompat.Callback mCb = new MediaControllerCompat.Callback() {
         @Override
         public void onPlaybackStateChanged(PlaybackStateCompat state) {
+            Log.e("NotificationManager", "onPlaybackStateChanged");
+            int newState = state.getState();
+            if (newState == PlaybackStateCompat.STATE_NONE || newState == PlaybackStateCompat.STATE_PAUSED) {
+                mState = newState;
+                startNotification();
+                new Handler().postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (mState == PlaybackStateCompat.STATE_PAUSED) {
+                            stopNotification();
+                        }
+                    }
+                }, 10000);
+            } else {
+                mState = newState;
+                startNotification();
+            }
             super.onPlaybackStateChanged(state);
         }
 
         @Override
         public void onMetadataChanged(MediaMetadataCompat metadata) {
+            Log.e("NotificationManager", "onMetadatachanged");
             super.onMetadataChanged(metadata);
+        }
+
+        @Override
+        public void onSessionDestroyed() {
+            Log.e("NotificationManager", "onSessionDestroyed");
+            super.onSessionDestroyed();
+            MediaSessionCompat.Token newToken = mService.getSessionToken();
+            if (!newToken.equals(mSessionToken)) {
+                mSessionToken = newToken;
+            }
+            if (mController != null) {
+                mController.unregisterCallback(mCb);
+            }
+            if (mSessionToken != null) {
+                try {
+                    mController = new MediaControllerCompat(mService, mSessionToken);
+                    mTransportControls = mController.getTransportControls();
+                    mController.registerCallback(mCb);
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
+            }
         }
     };
 
     private void addPlayPauseAction(NotificationCompat.Builder notificationBuilder) {
         PendingIntent pendingIntent = PendingIntent.getBroadcast(mService, 99,
                 new Intent("120"), PendingIntent.FLAG_CANCEL_CURRENT);
-        notificationBuilder.addAction(R.drawable.play_circle_outline, "Play",
-                pendingIntent);
+        if (mState == PlaybackStateCompat.STATE_PLAYING)
+            notificationBuilder.addAction(R.drawable.play_circle_outline, "Play",
+                    pendingIntent);
+        else
+            notificationBuilder.addAction(R.drawable.pause_filled, "Pause",
+                    pendingIntent);
     }
 
     @Override
     public void onReceive(Context context, Intent intent) {
         Log.e("NotificationManager", "onReceive Called");
+        if (mState == PlaybackStateCompat.STATE_PLAYING) {
+            mTransportControls.pause();
+            mState = PlaybackStateCompat.STATE_PAUSED;
+            startNotification();
+        } else {
+            mTransportControls.playFromMediaId(
+                    mService.getCurrentMediaDescription().getMediaId(),
+                    null);
+        }
     }
 
     private PendingIntent createContentIntent(MediaDescriptionCompat description) {

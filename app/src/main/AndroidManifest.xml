@@ -3,7 +3,6 @@
     package="com.knight.knight.muzic">
 
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <permission android:name="READ_EXTERNAL_STORAGE" />
 
     <application
         android:allowBackup="true"
@@ -19,7 +18,8 @@
             </intent-filter>
         </activity>
 
-        <service android:name=".service.MusicBackgroundService">
+        <service android:name=".service.MusicBackgroundService"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.media.browse.MediaBrowserService" />
             </intent-filter>

@@ -20,11 +20,13 @@ import java.util.List;
  * Created by kn1gh7 on 11/6/16.
  */
 
-public class MusicBackgroundService extends MediaBrowserServiceCompat implements MediaSessionCallbackManager.PlaybackStateCallback{
+public class MusicBackgroundService extends MediaBrowserServiceCompat
+        implements MediaSessionCallbackManager.PlaybackStateCallback {
     MediaSessionCompat mSession;
     PlaybackStateCompat.Builder playbackBuilder;
     NotificationManager notificationManager;
     private String currentPlayingMediaId;
+    private MusicListProvider musicListProvider;
 
     @Nullable
     @Override
@@ -37,7 +39,6 @@ public class MusicBackgroundService extends MediaBrowserServiceCompat implements
         result.sendResult(musicListProvider.getPlayList());
     }
 
-    private MusicListProvider musicListProvider;
     @Override
     public void onCreate() {
         super.onCreate();
@@ -55,7 +56,7 @@ public class MusicBackgroundService extends MediaBrowserServiceCompat implements
                 .setActions(PlaybackStateCompat.ACTION_PLAY |
                         PlaybackStateCompat.ACTION_PAUSE |
                         PlaybackStateCompat.ACTION_PLAY_FROM_MEDIA_ID)
-                .setState(PlaybackStateCompat.STATE_PLAYING,
+                .setState(PlaybackStateCompat.STATE_NONE,
                         PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN,
                         1);
 
@@ -63,7 +64,7 @@ public class MusicBackgroundService extends MediaBrowserServiceCompat implements
 
         mSession.setPlaybackState(state);
 
-        mSession.setActive(true);
+        mSession.setActive(false);
 
         setSessionToken(mSession.getSessionToken());
         notificationManager = new NotificationManager(this);
@@ -78,11 +79,16 @@ public class MusicBackgroundService extends MediaBrowserServiceCompat implements
 
     @Override
     public void onPlay(String mediaId) {
+        currentPlayingMediaId = mediaId;
         playbackBuilder.setState(PlaybackStateCompat.STATE_PLAYING,
                 PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1);
-        currentPlayingMediaId = mediaId;
-        mSession.setMetadata(musicListProvider.getMetaDataForMediaId(currentPlayingMediaId));
+        mSession.setActive(true);
+        mSession.setMetadata(musicListProvider.getMetaDataForMediaId(
+                currentPlayingMediaId));
+        mSession.setPlaybackState(playbackBuilder.build());
         notificationManager.startNotification();
+
+        startService(new Intent(getApplicationContext(), MusicBackgroundService.class));
     }
 
     public MediaDescriptionCompat getCurrentMediaDescription() {
@@ -91,6 +97,25 @@ public class MusicBackgroundService extends MediaBrowserServiceCompat implements
 
     @Override
     public void onPause() {
+        playbackBuilder.setState(PlaybackStateCompat.STATE_PAUSED,
+                PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1);
+        mSession.setPlaybackState(playbackBuilder.build());
+    }
+
+    @Override
+    public void onStop() {
+        Log.e("Service", "onStop");
+        playbackBuilder.setState(PlaybackStateCompat.STATE_STOPPED,
+                PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1);
+        mSession.setPlaybackState(playbackBuilder.build());
         notificationManager.stopNotification();
+        stopSelf();
+    }
+
+    @Override
+    public void onDestroy() {
+        Log.e("Service", "onDestroy");
+        //notificationManager.stopNotification();
+        super.onDestroy();
     }
 }

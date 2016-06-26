@@ -1,15 +1,15 @@
 package com.knight.knight.muzic.service;
 
 import android.content.Context;
-import android.content.Intent;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
+import android.media.MediaPlayer.OnPreparedListener;
+import android.media.MediaPlayer.OnCompletionListener;
+import android.media.MediaPlayer.OnErrorListener;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
 import android.support.v4.media.session.MediaSessionCompat;
-import android.support.v4.text.TextUtilsCompat;
-import android.text.TextUtils;
 import android.util.Log;
 
 import java.io.IOException;
@@ -18,60 +18,94 @@ import java.io.IOException;
  * Created by kn1gh7 on 11/6/16.
  */
 
-public class MediaSessionCallbackManager extends MediaSessionCompat.Callback {
+public class MediaSessionCallbackManager extends MediaSessionCompat.Callback
+        implements OnCompletionListener, OnPreparedListener, OnErrorListener, AudioManager.OnAudioFocusChangeListener {
     MediaPlayer mPlayer;
     Context mContext;
-    String lastMediaID;
-    int lastPlayingPosition;
+    String currentMediaId;
+    AudioManager audioManager;
+    int mCurrentAudioFocus;
 
     public MediaSessionCallbackManager(Context context) {
         this.mContext = context;
+        audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+        mCurrentAudioFocus = AudioManager.AUDIOFOCUS_LOSS;
     }
 
-    @Override
-    public boolean onMediaButtonEvent(Intent mediaButtonEvent) {
-        Log.e("MediaSessionCallbackmgr", "onMediaButtonEvent");
-        return super.onMediaButtonEvent(mediaButtonEvent);
-    }
-
-    @Override
-    public void onPlayFromUri(Uri uri, Bundle extras) {
-        super.onPlayFromUri(uri, extras);
-        Log.e("MediaSessionCallbackmgr", "onPlayFromUri");
-    }
-
-    @Override
-    public void onPlay() {
-        if (mPlayer == null)
+    private void initializePlayer() { //Sets Player to idle state
+        if (mPlayer == null) {
             mPlayer = new MediaPlayer();
+            mPlayer.setOnCompletionListener(this);
+            mPlayer.setOnPreparedListener(this);
+            mPlayer.setOnErrorListener(this);
+        }
+    }
 
-        mPlayer.seekTo(lastPlayingPosition);
-        setPlayer(lastMediaID);
-        super.onPlay();
+    private void handleStopPlayback() {
+        ((PlaybackStateCallback)mContext).onStop();
+        if (mPlayer != null) {
+            mPlayer.release();
+            releaseAudioFocus();
+        }
+        mPlayer = null;
+        currentMediaId = null;
+    }
+
+    private boolean getAudioFocus() {
+        if (audioManager.requestAudioFocus(this,
+                AudioManager.STREAM_MUSIC,
+                AudioManager.AUDIOFOCUS_GAIN) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+            mCurrentAudioFocus = AudioManager.AUDIOFOCUS_GAIN;
+            return true;
+        }
+
+        return false;
+    }
+
+    private void releaseAudioFocus() {
+        if (mCurrentAudioFocus == AudioManager.AUDIOFOCUS_GAIN) {
+            if (audioManager.abandonAudioFocus(this) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+                mCurrentAudioFocus = AudioManager.AUDIOFOCUS_LOSS;
+            }
+        }
+    }
+
+    private void handleStartPlayback() {
+        if (getAudioFocus()) {
+            mPlayer.start();
+            ((PlaybackStateCallback) mContext).onPlay(currentMediaId);
+        }
+    }
+
+    private void handlePausePlayback() {
+        if (mPlayer != null && mPlayer.isPlaying()) {
+            mPlayer.pause();
+            ((PlaybackStateCallback)mContext).onPause();
+            releaseAudioFocus();
+        }
     }
 
     @Override
     public void onPlayFromMediaId(String mediaId, Bundle extras) {
         Log.e("MediaSessionCallbackmgr", "onPlayFromMediaId");
-        super.onPlayFromMediaId(mediaId, extras);
-        if (mPlayer != null && mPlayer.isPlaying()) {
-            ((PlaybackStateCallback)mContext).onPause();
-            mPlayer.stop();
-            if (TextUtils.equals(lastMediaID, mediaId)) {
-                mPlayer.release();
-                mPlayer = null;
-                lastMediaID = null;
-                return;
-            } else {
-                mPlayer.reset();
-            }
+        if (mPlayer != null) {
+            handleStopPlayback();
         }
 
-        if (mPlayer == null) {
-            mPlayer = new MediaPlayer();
-        }
-
+        initializePlayer();
         setPlayer(mediaId);
+        super.onPlayFromMediaId(mediaId, extras);
+    }
+
+    @Override
+    public void onPlay() {
+        if (mPlayer == null || currentMediaId == null) {
+            handleStopPlayback();
+            return;
+        }
+
+        handleStartPlayback();
+        super.onPlay();
     }
 
     private void setPlayer(String mediaId) {
@@ -80,22 +114,8 @@ public class MediaSessionCallbackManager extends MediaSessionCompat.Callback {
             Uri uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
             mPlayer.setDataSource(mContext,
                     Uri.parse(uri + "/" + mediaId));
-            mPlayer.prepare();
-            mPlayer.start();
-            ((PlaybackStateCallback)mContext).onPlay(mediaId);
-            lastMediaID = mediaId;
-            mPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-                @Override
-                public void onCompletion(MediaPlayer mp) {
-
-                    Log.e("MediaSessionCallbackmgr", "onCompletionListener");
-                    ((PlaybackStateCallback)mContext).onStop();
-                    mPlayer.release();
-                    mPlayer = null;
-                    lastMediaID = null;
-                    return;
-                }
-            });
+            mPlayer.prepareAsync();
+            currentMediaId = mediaId;
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -105,27 +125,47 @@ public class MediaSessionCallbackManager extends MediaSessionCompat.Callback {
     public void onPause() {
         Log.e("MediaSessionCallbackmgr", "onPause()");
         super.onPause();
-        if (mPlayer != null && mPlayer.isPlaying()) {
-            lastPlayingPosition = mPlayer.getCurrentPosition();
-            mPlayer.stop();
-            mPlayer.release();
-            mPlayer = null;
-            lastMediaID = null;
-        }
+        handlePausePlayback();
     }
 
     @Override
     public void onStop() {
         Log.e("MediaSessionCallbackmgr", "onStop()");
         super.onStop();
-        ((PlaybackStateCallback)mContext).onStop();
+        handleStopPlayback();
+    }
+
+    @Override
+    public void onCompletion(MediaPlayer mp) {
+        Log.e("MediaSessionCallbackmgr", "onCompletionListener");
+        handleStopPlayback();
+    }
+
+    @Override
+    public void onPrepared(MediaPlayer mp) {
+        handleStartPlayback();
+    }
+
+    @Override
+    public boolean onError(MediaPlayer mp, int what, int extra) {
+        handleStopPlayback();
+        return false;
+    }
+
+    @Override
+    public void onAudioFocusChange(int focusChange) {
+        if (focusChange == AudioManager.AUDIOFOCUS_LOSS) {
+            handleStopPlayback();
+        } else if (focusChange == AudioManager.AUDIOFOCUS_LOSS_TRANSIENT) {
+            handlePausePlayback();
+        } else if (focusChange == AudioManager.AUDIOFOCUS_GAIN) {
+            handleStartPlayback();
+        }
     }
 
     public interface PlaybackStateCallback {
         void onPlay(String mediaId);
-
         void onPause();
-
         void onStop();
     }
 }

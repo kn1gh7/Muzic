@@ -29,6 +29,8 @@ public class MusicListProvider {
     Context context;
     private List<MediaMetadataCompat> completeMusicList;
     private HashMap<String, MediaMetadataCompat> musicListByMediaId;
+    private List<MediaBrowserCompat.MediaItem> myPlayList;
+    boolean isListPrepared;
 
     public MusicListProvider(Context context) {
         this.context = context;
@@ -99,20 +101,19 @@ public class MusicListProvider {
         }
     }
 
-    List<MediaBrowserCompat.MediaItem> myPlayList;
-    boolean isListPrepared;
-
     public List<MediaBrowserCompat.MediaItem> getPlayList() {
-        createMusicList();
         if (myPlayList != null && isListPrepared)
             return myPlayList;
+
+        createMusicList();
 
         if (myPlayList == null)
             myPlayList = new ArrayList<>();
 
         for (MediaMetadataCompat metadataCompat : completeMusicList) {
-            MediaBrowserCompat.MediaItem mediaItem = new MediaBrowserCompat.MediaItem(metadataCompat.getDescription(),
-                    MediaBrowserCompat.MediaItem.FLAG_PLAYABLE);
+            MediaBrowserCompat.MediaItem mediaItem =
+                    new MediaBrowserCompat.MediaItem(metadataCompat.getDescription(),
+                        MediaBrowserCompat.MediaItem.FLAG_PLAYABLE);
             myPlayList.add(mediaItem);
         }
         isListPrepared = true;

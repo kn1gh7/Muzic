@@ -38,6 +38,8 @@ public class NotificationManager extends BroadcastReceiver {
     private MediaSessionCompat.Token mSessionToken;
     private MediaControllerCompat.TransportControls mTransportControls;
     private NotificationManagerCompat mNotificationManager;
+    private MediaMetadataCompat mMetadata;
+    private PlaybackStateCompat mPlaybackState;
 
     public NotificationManager(MusicBackgroundService mService) {
         this.mService = mService;
@@ -52,17 +54,17 @@ public class NotificationManager extends BroadcastReceiver {
     }
 
     private Notification createNotification() {
-        /*Log.d("NotificationManager", "updateNotificationMetadata. mMetadata=" + mMetadata);
+        Log.d("NotificationManager", "updateNotificationMetadata. mMetadata=" + mMetadata);
         if (mMetadata == null || mPlaybackState == null) {
             return null;
-        }*/
+        }
 
         NotificationCompat.Builder notificationBuilder = new NotificationCompat.Builder(mService);
         int playPauseButtonPosition = 0;
 
         addPlayPauseAction(notificationBuilder);
 
-        MediaDescriptionCompat description = mService.getCurrentMediaDescription();
+        MediaDescriptionCompat description = mMetadata.getDescription();
 
         MediaMetadataRetriever mmr = new MediaMetadataRetriever();
         byte[] rawArt;
@@ -123,6 +125,9 @@ public class NotificationManager extends BroadcastReceiver {
     }
 
     public void startNotification() {
+        mMetadata = mController.getMetadata();
+        mPlaybackState = mController.getPlaybackState();
+
         Notification notification = createNotification();
         mController.registerCallback(mCb);
         IntentFilter filter = new IntentFilter();
@@ -143,27 +148,25 @@ public class NotificationManager extends BroadcastReceiver {
         mService.stopForeground(true);
     }
 
-    int mState;
-
     private MediaControllerCompat.Callback mCb = new MediaControllerCompat.Callback() {
         @Override
         public void onPlaybackStateChanged(PlaybackStateCompat state) {
             Log.e("NotificationManager", "onPlaybackStateChanged");
-            int newState = state.getState();
-            if (newState == PlaybackStateCompat.STATE_NONE || newState == PlaybackStateCompat.STATE_PAUSED) {
-                mState = newState;
+            mPlaybackState = state;
+            int mState = mPlaybackState.getState();
+
+            if (mState == PlaybackStateCompat.STATE_NONE || mState == PlaybackStateCompat.STATE_PAUSED) {
                 startNotification();
                 new Handler().postDelayed(new Runnable() {
                     @Override
                     public void run() {
-                        if (mState == PlaybackStateCompat.STATE_PAUSED) {
+                        if (mPlaybackState.getState() == PlaybackStateCompat.STATE_PAUSED) {
                             stopNotification();
                         }
                     }
-                }, 10000);
-            } else {
-                mState = newState;
-                startNotification();
+                }, 100000);
+            } else if (mState == PlaybackStateCompat.STATE_STOPPED) {
+                stopNotification();
             }
             super.onPlaybackStateChanged(state);
         }
@@ -171,6 +174,8 @@ public class NotificationManager extends BroadcastReceiver {
         @Override
         public void onMetadataChanged(MediaMetadataCompat metadata) {
             Log.e("NotificationManager", "onMetadatachanged");
+            mMetadata = metadata;
+            startNotification();
             super.onMetadataChanged(metadata);
         }
 
@@ -200,25 +205,25 @@ public class NotificationManager extends BroadcastReceiver {
     private void addPlayPauseAction(NotificationCompat.Builder notificationBuilder) {
         PendingIntent pendingIntent = PendingIntent.getBroadcast(mService, 99,
                 new Intent("120"), PendingIntent.FLAG_CANCEL_CURRENT);
-        if (mState == PlaybackStateCompat.STATE_PLAYING)
-            notificationBuilder.addAction(R.drawable.play_circle_outline, "Play",
+        if (mPlaybackState.getState() == PlaybackStateCompat.STATE_PLAYING)
+            notificationBuilder.addAction(R.drawable.pause_filled, "Pause",
                     pendingIntent);
         else
-            notificationBuilder.addAction(R.drawable.pause_filled, "Pause",
+            notificationBuilder.addAction(R.drawable.play_circle_outline, "Play",
                     pendingIntent);
     }
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        Log.e("NotificationManager", "onReceive Called");
-        if (mState == PlaybackStateCompat.STATE_PLAYING) {
+        Log.e("NotificationManager", "onReceive Called " + mPlaybackState.getState());
+        if (mPlaybackState.getState() == PlaybackStateCompat.STATE_PLAYING) {
             mTransportControls.pause();
-            mState = PlaybackStateCompat.STATE_PAUSED;
+            startNotification();
+        } else if (mPlaybackState.getState() == PlaybackStateCompat.STATE_PAUSED) {
+            mTransportControls.play();
             startNotification();
         } else {
-            mTransportControls.playFromMediaId(
-                    mService.getCurrentMediaDescription().getMediaId(),
-                    null);
+            stopNotification();
         }
     }
 

@@ -12,6 +12,7 @@ import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
 
+import com.knight.knight.muzic.QueueManager;
 import com.knight.knight.muzic.notification.NotificationManager;
 
 import java.util.List;
@@ -26,7 +27,7 @@ public class MusicBackgroundService extends MediaBrowserServiceCompat
     PlaybackStateCompat.Builder playbackBuilder;
     NotificationManager notificationManager;
     private String currentPlayingMediaId;
-    private MusicListProvider musicListProvider;
+    private QueueManager qManager;
 
     @Nullable
     @Override
@@ -36,14 +37,14 @@ public class MusicBackgroundService extends MediaBrowserServiceCompat
 
     @Override
     public void onLoadChildren(@NonNull String parentId, @NonNull Result<List<MediaBrowserCompat.MediaItem>> result) {
-        result.sendResult(musicListProvider.getPlayList());
+        result.sendResult(qManager.getPlayList());
     }
 
     @Override
     public void onCreate() {
         super.onCreate();
 
-        musicListProvider = new MusicListProvider(getApplicationContext());
+        qManager = new QueueManager(getApplicationContext());
         mSession = new MediaSessionCompat(getApplicationContext(),
                 MusicBackgroundService.class.getSimpleName());
 
@@ -79,12 +80,11 @@ public class MusicBackgroundService extends MediaBrowserServiceCompat
 
     @Override
     public void onPlay(String mediaId) {
-        currentPlayingMediaId = mediaId;
+        qManager.setCurrentPlayingMediaId(mediaId);
         playbackBuilder.setState(PlaybackStateCompat.STATE_PLAYING,
                 PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1);
         mSession.setActive(true);
-        mSession.setMetadata(musicListProvider.getMetaDataForMediaId(
-                currentPlayingMediaId));
+        mSession.setMetadata(qManager.getCurrentMetadata());
         mSession.setPlaybackState(playbackBuilder.build());
         notificationManager.startNotification();
 
@@ -92,7 +92,7 @@ public class MusicBackgroundService extends MediaBrowserServiceCompat
     }
 
     public MediaDescriptionCompat getCurrentMediaDescription() {
-        return musicListProvider.getMetaDataForMediaId(currentPlayingMediaId).getDescription();
+        return qManager.getCurrentMetadata().getDescription();
     }
 
     @Override

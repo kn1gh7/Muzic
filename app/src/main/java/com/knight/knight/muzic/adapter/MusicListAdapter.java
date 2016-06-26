@@ -1,5 +1,6 @@
 package com.knight.knight.muzic.adapter;
 
+import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -9,12 +10,15 @@ import android.os.Build;
 import android.provider.MediaStore;
 import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaDescriptionCompat;
+import android.support.v4.media.session.MediaControllerCompat;
+import android.support.v4.media.session.PlaybackStateCompat;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import com.knight.knight.muzic.MusicListActivity;
 import com.knight.knight.muzic.R;
 import com.knight.knight.muzic.callbackInterfaces.MusicItemClicked;
 import com.knight.knight.muzic.viewholder.MusicListViewHolder;
@@ -30,6 +34,7 @@ public class MusicListAdapter extends RecyclerView.Adapter<MusicListViewHolder> 
     MusicItemClicked startMusicCallback;
     List<MediaBrowserCompat.MediaItem> musicList;
     int lastPlayingPosition;
+    MediaControllerCompat mMediaController;
 
     public MusicListAdapter(Context context,
                             MusicItemClicked startMusicCallback,
@@ -38,6 +43,7 @@ public class MusicListAdapter extends RecyclerView.Adapter<MusicListViewHolder> 
         this.musicList = musicList;
         this.startMusicCallback = startMusicCallback;
         lastPlayingPosition = INVALID_POSITION;
+        mMediaController = ((MusicListActivity)context).getSupportMediaController();
     }
 
     @Override
@@ -73,30 +79,46 @@ public class MusicListAdapter extends RecyclerView.Adapter<MusicListViewHolder> 
             }
         });
 
-        MediaMetadataRetriever mmr = new MediaMetadataRetriever();
-        byte[] rawArt;
-        Bitmap art;
-        BitmapFactory.Options bfo = new BitmapFactory.Options();
-
-        Uri uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
-        mmr.setDataSource(context.getApplicationContext(),
-                Uri.parse(uri + "/" + musicItem.getDescription().getMediaId()));
-        rawArt = mmr.getEmbeddedPicture();
-
-        // if rawArt is null then no cover art is embedded in the file or is not
-        // recognized as such.
-        if (null != rawArt) {
-            art = BitmapFactory.decodeByteArray(rawArt, 0, rawArt.length, bfo);
-
-            holder.albumPhoto.setImageBitmap(art);
-            Log.i("Art ", "Not Null");
-        } else {
-            Log.i("Art ", "Null");
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                holder.albumPhoto.setImageDrawable(context.getDrawable(R.drawable.dummy));
+        int currentState = mMediaController.getPlaybackState().getState();
+        if (currentState != PlaybackStateCompat.STATE_NONE && musicItem.getDescription().getMediaId()
+                .equals(mMediaController.getMetadata().getDescription().getMediaId()) &&
+                (currentState == PlaybackStateCompat.STATE_PAUSED ||
+                        currentState == PlaybackStateCompat.STATE_PLAYING)) {
+            Bitmap bitmap;
+            if (currentState == PlaybackStateCompat.STATE_PLAYING) {
+                bitmap = BitmapFactory.decodeResource(context.getResources(),
+                        R.drawable.play_circle_outline);
+            } else {
+                bitmap = BitmapFactory.decodeResource(context.getResources(),
+                        R.drawable.pause_filled);
             }
+            holder.albumPhoto.setImageBitmap(bitmap);
+        } else {
+            MediaMetadataRetriever mmr = new MediaMetadataRetriever();
+            byte[] rawArt;
+            Bitmap art;
+            BitmapFactory.Options bfo = new BitmapFactory.Options();
+
+            Uri uri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
+            mmr.setDataSource(context.getApplicationContext(),
+                    Uri.parse(uri + "/" + musicItem.getDescription().getMediaId()));
+            rawArt = mmr.getEmbeddedPicture();
+
+            // if rawArt is null then no cover art is embedded in the file or is not
+            // recognized as such.
+            if (null != rawArt) {
+                art = BitmapFactory.decodeByteArray(rawArt, 0, rawArt.length, bfo);
+
+                holder.albumPhoto.setImageBitmap(art);
+                Log.i("Art ", "Not Null");
+            } else {
+                Log.i("Art ", "Null");
+                Bitmap dummyBitmap = BitmapFactory.decodeResource(context.getResources(),
+                        R.drawable.dummy);
+                holder.albumPhoto.setImageBitmap(dummyBitmap);
+            }
+            // Code that uses the cover art retrieved below.
         }
-        // Code that uses the cover art retrieved below.
 
     }
 

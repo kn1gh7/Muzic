@@ -126,6 +126,7 @@ public class MusicListActivity extends AppCompatActivity implements
     @Override
     protected void onPause() {
         super.onPause();
+        lastMusicID = null;
     }
 
     @Override
@@ -150,6 +151,7 @@ public class MusicListActivity extends AppCompatActivity implements
         public void onPlaybackStateChanged(PlaybackStateCompat state) {
             mState = state.getState();
             super.onPlaybackStateChanged(state);
+            musicListAdapter.notifyDataSetChanged();
         }
 
         @Override

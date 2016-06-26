@@ -29,7 +29,6 @@ import java.util.List;
 public class MusicListActivity extends AppCompatActivity implements
         MusicItemClicked,
         MediaBrowserCallbackManager.Callback {
-    List<MediaBrowserCompat.MediaItem> musicList;
     MusicListAdapter musicListAdapter;
     TextView errorView;
     RecyclerView musiclist_recyclerView;
@@ -79,16 +78,11 @@ public class MusicListActivity extends AppCompatActivity implements
 
     private void initializeOthers() {
         logHelper = new LogHelper(new ComponentName(this, MusicListActivity.class));
-        musicList = new ArrayList<MediaBrowserCompat.MediaItem>();
         musiclist_recyclerView.setLayoutManager(
                 new LinearLayoutManager(this,
                         LinearLayoutManager.VERTICAL,
                         false));
 
-        musicListAdapter = new MusicListAdapter(MusicListActivity.this,
-                MusicListActivity.this,
-                musicList);
-        musiclist_recyclerView.setAdapter(musicListAdapter);
     }
 
     private void initializeMediaBrowser() {

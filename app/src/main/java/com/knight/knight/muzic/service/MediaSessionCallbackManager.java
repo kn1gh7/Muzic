@@ -9,8 +9,11 @@ import android.media.MediaPlayer.OnErrorListener;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.util.Log;
+
+import com.knight.knight.muzic.QueueManager;
 
 import java.io.IOException;
 
@@ -25,9 +28,11 @@ public class MediaSessionCallbackManager extends MediaSessionCompat.Callback
     String currentMediaId;
     AudioManager audioManager;
     int mCurrentAudioFocus;
+    QueueManager qManager;
 
-    public MediaSessionCallbackManager(Context context) {
+    public MediaSessionCallbackManager(Context context, QueueManager qManager) {
         this.mContext = context;
+        this.qManager = qManager;
         audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
         mCurrentAudioFocus = AudioManager.AUDIOFOCUS_LOSS;
     }
@@ -70,6 +75,16 @@ public class MediaSessionCallbackManager extends MediaSessionCompat.Callback
         }
     }
 
+    private void playNewMediaId(String mediaId) {
+        Log.e("MediaSessionCallbackmgr", "onPlayFromMediaId");
+        if (mPlayer != null) {
+            handleStopPlayback();
+        }
+
+        initializePlayer();
+        setPlayer(mediaId);
+    }
+
     private void handleStartPlayback() {
         if (getAudioFocus()) {
             mPlayer.start();
@@ -87,13 +102,7 @@ public class MediaSessionCallbackManager extends MediaSessionCompat.Callback
 
     @Override
     public void onPlayFromMediaId(String mediaId, Bundle extras) {
-        Log.e("MediaSessionCallbackmgr", "onPlayFromMediaId");
-        if (mPlayer != null) {
-            handleStopPlayback();
-        }
-
-        initializePlayer();
-        setPlayer(mediaId);
+        playNewMediaId(mediaId);
         super.onPlayFromMediaId(mediaId, extras);
     }
 
@@ -139,6 +148,9 @@ public class MediaSessionCallbackManager extends MediaSessionCompat.Callback
     public void onCompletion(MediaPlayer mp) {
         Log.e("MediaSessionCallbackmgr", "onCompletionListener");
         handleStopPlayback();
+        if (qManager.getNextMediaItem() != null) {
+            playNewMediaId(qManager.getNextMediaItem().getMediaId());
+        }
     }
 
     @Override

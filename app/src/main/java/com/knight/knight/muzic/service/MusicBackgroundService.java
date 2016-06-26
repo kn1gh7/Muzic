@@ -48,7 +48,7 @@ public class MusicBackgroundService extends MediaBrowserServiceCompat
         mSession = new MediaSessionCompat(getApplicationContext(),
                 MusicBackgroundService.class.getSimpleName());
 
-        mSession.setCallback(new MediaSessionCallbackManager(this));
+        mSession.setCallback(new MediaSessionCallbackManager(this, qManager));
 
         mSession.setFlags(MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS |
                 MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS);

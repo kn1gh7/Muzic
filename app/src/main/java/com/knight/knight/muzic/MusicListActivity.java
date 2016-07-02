@@ -23,7 +23,6 @@ import com.knight.knight.muzic.service.MediaBrowserCallbackManager;
 import com.knight.knight.muzic.service.MusicBackgroundService;
 import com.knight.knight.muzic.utils.LogHelper;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class MusicListActivity extends AppCompatActivity implements
@@ -104,7 +103,7 @@ public class MusicListActivity extends AppCompatActivity implements
 
     @Override
     public void onMusicItemClicked(String musicID) {
-        logHelper.Loge("playing MusicItem: " + musicID);
+        logHelper.loge("playing MusicItem: " + musicID);
         if (musicID.equals(lastMusicID)) {
             if (mState == PlaybackStateCompat.STATE_PAUSED || mState == PlaybackStateCompat.STATE_NONE) {
                 getSupportMediaController().getTransportControls().play();
@@ -130,6 +129,7 @@ public class MusicListActivity extends AppCompatActivity implements
             MediaControllerCompat mediaController = new MediaControllerCompat(MusicListActivity.this, token);
             setSupportMediaController(mediaController);
             mediaController.registerCallback(playlistDataChangeCallback);
+            mState = getSupportMediaController().getPlaybackState().getState();
         } catch (RemoteException e) {
             e.printStackTrace();
         }

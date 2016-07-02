@@ -1,5 +1,6 @@
 package com.knight.knight.muzic.service;
 
+import android.content.ComponentName;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
@@ -10,10 +11,10 @@ import android.support.v4.media.MediaDescriptionCompat;
 import android.support.v4.media.session.MediaButtonReceiver;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
-import android.util.Log;
 
 import com.knight.knight.muzic.QueueManager;
 import com.knight.knight.muzic.notification.NotificationManager;
+import com.knight.knight.muzic.utils.LogHelper;
 
 import java.util.List;
 
@@ -26,8 +27,8 @@ public class MusicBackgroundService extends MediaBrowserServiceCompat
     MediaSessionCompat mSession;
     PlaybackStateCompat.Builder playbackBuilder;
     NotificationManager notificationManager;
-    private String currentPlayingMediaId;
     private QueueManager qManager;
+    private LogHelper logHelper;
 
     @Nullable
     @Override
@@ -44,6 +45,7 @@ public class MusicBackgroundService extends MediaBrowserServiceCompat
     public void onCreate() {
         super.onCreate();
 
+        logHelper = new LogHelper(new ComponentName(this, MusicBackgroundService.class));
         qManager = new QueueManager(getApplicationContext());
         mSession = new MediaSessionCompat(getApplicationContext(),
                 MusicBackgroundService.class.getSimpleName());
@@ -69,11 +71,12 @@ public class MusicBackgroundService extends MediaBrowserServiceCompat
 
         setSessionToken(mSession.getSessionToken());
         notificationManager = new NotificationManager(this);
-        Log.e("MusicBackgroundService", "onCreate");
+        logHelper.loge("onCreate");
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
+
         MediaButtonReceiver.handleIntent(mSession, intent);
         return START_STICKY;
     }
@@ -104,7 +107,7 @@ public class MusicBackgroundService extends MediaBrowserServiceCompat
 
     @Override
     public void onStop() {
-        Log.e("Service", "onStop");
+        logHelper.loge("onStop");
         playbackBuilder.setState(PlaybackStateCompat.STATE_STOPPED,
                 PlaybackStateCompat.PLAYBACK_POSITION_UNKNOWN, 1);
         mSession.setPlaybackState(playbackBuilder.build());
@@ -114,8 +117,7 @@ public class MusicBackgroundService extends MediaBrowserServiceCompat
 
     @Override
     public void onDestroy() {
-        Log.e("Service", "onDestroy");
-        //notificationManager.stopNotification();
+        logHelper.loge("onDestroy");
         super.onDestroy();
     }
 }

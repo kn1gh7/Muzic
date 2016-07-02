@@ -13,7 +13,7 @@ public class LogHelper {
         this.tag = tag;
     }
 
-    public void Loge(String msg) {
+    public void loge(String msg) {
         Log.e(tag.getClassName(), msg);
     }
 }

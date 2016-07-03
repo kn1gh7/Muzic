@@ -3,6 +3,7 @@ package com.knight.knight.muzic.notification;
 import android.app.Notification;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -16,23 +17,23 @@ import android.os.Handler;
 import android.os.RemoteException;
 import android.provider.MediaStore;
 import android.support.v4.app.NotificationManagerCompat;
-import android.support.v4.media.MediaBrowserCompat;
 import android.support.v4.media.MediaDescriptionCompat;
 import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.session.MediaControllerCompat;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.support.v7.app.NotificationCompat;
-import android.util.Log;
 
 import com.knight.knight.muzic.MusicListActivity;
 import com.knight.knight.muzic.R;
 import com.knight.knight.muzic.service.MusicBackgroundService;
+import com.knight.knight.muzic.utils.LogHelper;
 
 /**
  * Created by kn1gh7 on 18/6/16.
  */
 public class NotificationManager extends BroadcastReceiver {
+    public static final int NOTIFICATION_ID = 12;
     private MusicBackgroundService mService;
     private MediaControllerCompat mController;
     private MediaSessionCompat.Token mSessionToken;
@@ -40,8 +41,11 @@ public class NotificationManager extends BroadcastReceiver {
     private NotificationManagerCompat mNotificationManager;
     private MediaMetadataCompat mMetadata;
     private PlaybackStateCompat mPlaybackState;
+    private LogHelper logHelper;
+    private boolean notificationStarted;
 
     public NotificationManager(MusicBackgroundService mService) {
+        logHelper = new LogHelper(new ComponentName(mService, NotificationManager.class));
         this.mService = mService;
         mSessionToken = mService.getSessionToken();
         try {
@@ -54,7 +58,7 @@ public class NotificationManager extends BroadcastReceiver {
     }
 
     private Notification createNotification() {
-        Log.d("NotificationManager", "updateNotificationMetadata. mMetadata=" + mMetadata);
+        logHelper.loge("updateNotificationMetadata. mMetadata=" + mMetadata);
         if (mMetadata == null || mPlaybackState == null) {
             return null;
         }
@@ -125,19 +129,24 @@ public class NotificationManager extends BroadcastReceiver {
     }
 
     public void startNotification() {
-        mMetadata = mController.getMetadata();
-        mPlaybackState = mController.getPlaybackState();
+        if (!notificationStarted) {
+            mMetadata = mController.getMetadata();
+            mPlaybackState = mController.getPlaybackState();
 
-        Notification notification = createNotification();
-        mController.registerCallback(mCb);
-        IntentFilter filter = new IntentFilter();
-        filter.addAction("120");
-        mService.registerReceiver(this, filter);
+            Notification notification = createNotification();
+            mController.registerCallback(mCb);
+            IntentFilter filter = new IntentFilter();
+            filter.addAction("120");
+            mService.registerReceiver(this, filter);
 
-        mService.startForeground(12, notification);
+            mService.startForeground(NOTIFICATION_ID, notification);
+            notificationStarted = true;
+        }
     }
 
     public void stopNotification() {
+        notificationStarted = false;
+        logHelper.loge("stopNotification");
         mController.unregisterCallback(mCb);
         try {
             mNotificationManager.cancel(12);
@@ -151,20 +160,24 @@ public class NotificationManager extends BroadcastReceiver {
     private MediaControllerCompat.Callback mCb = new MediaControllerCompat.Callback() {
         @Override
         public void onPlaybackStateChanged(PlaybackStateCompat state) {
-            Log.e("NotificationManager", "onPlaybackStateChanged");
+            logHelper.loge("onPlaybackStateChanged");
             mPlaybackState = state;
             int mState = mPlaybackState.getState();
 
-            if (mState == PlaybackStateCompat.STATE_NONE || mState == PlaybackStateCompat.STATE_PAUSED) {
-                startNotification();
+            if (mState == PlaybackStateCompat.STATE_NONE
+                    || mState == PlaybackStateCompat.STATE_PAUSED
+                    || mState == PlaybackStateCompat.STATE_PLAYING) {
+                Notification notification = createNotification();
+                if (notification != null)
+                    mNotificationManager.notify(NOTIFICATION_ID, notification);
                 new Handler().postDelayed(new Runnable() {
                     @Override
                     public void run() {
                         if (mPlaybackState.getState() == PlaybackStateCompat.STATE_PAUSED) {
-                            stopNotification();
+                            mController.getTransportControls().stop();
                         }
                     }
-                }, 100000);
+                }, 10000);
             } else if (mState == PlaybackStateCompat.STATE_STOPPED) {
                 stopNotification();
             }
@@ -173,15 +186,18 @@ public class NotificationManager extends BroadcastReceiver {
 
         @Override
         public void onMetadataChanged(MediaMetadataCompat metadata) {
-            Log.e("NotificationManager", "onMetadatachanged");
+            logHelper.loge("onMetadatachanged");
             mMetadata = metadata;
-            startNotification();
+            Notification notification = createNotification();
+            if (notification != null) {
+                mNotificationManager.notify(NOTIFICATION_ID, notification);
+            }
             super.onMetadataChanged(metadata);
         }
 
         @Override
         public void onSessionDestroyed() {
-            Log.e("NotificationManager", "onSessionDestroyed");
+            logHelper.loge("onSessionDestroyed");
             super.onSessionDestroyed();
             MediaSessionCompat.Token newToken = mService.getSessionToken();
             if (!newToken.equals(mSessionToken)) {
@@ -215,7 +231,7 @@ public class NotificationManager extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        Log.e("NotificationManager", "onReceive Called " + mPlaybackState.getState());
+        logHelper.loge("onReceive Called " + mPlaybackState.getState());
         if (mPlaybackState.getState() == PlaybackStateCompat.STATE_PLAYING) {
             mTransportControls.pause();
             startNotification();

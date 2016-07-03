@@ -37,6 +37,12 @@ public class MediaSessionCallbackManager extends MediaSessionCompat.Callback
     }
 
     @Override
+    public void onStop() {
+        mediaPlaybackManager.stop();
+        super.onStop();
+    }
+
+    @Override
     public void onPlay() {
         if (currentMediaId != null) {
             mediaPlaybackManager.play();

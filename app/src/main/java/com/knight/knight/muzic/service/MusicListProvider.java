@@ -18,6 +18,9 @@ import android.util.Log;
 import com.knight.knight.muzic.R;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 
@@ -82,6 +85,7 @@ public class MusicListProvider {
                         .putString(MediaMetadataCompat.METADATA_KEY_ALBUM_ART_URI, uri + "/" + albumID)
                         .putString(MediaMetadataCompat.METADATA_KEY_ART_URI, uri + "/" + albumID)
                         .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_ICON_URI, uri + "/" + albumID)
+                        .putString(MediaMetadataCompat.METADATA_KEY_DISPLAY_DESCRIPTION, duration + "")
                         .build();
                 /*MusicItemModel musicItemModel = new MusicItemModel();
                 musicItemModel.setTitle(thisTitle);
@@ -95,6 +99,13 @@ public class MusicListProvider {
                 // ...process entry...
             } while (cursor.moveToNext());
 
+            Collections.sort(completeMusicList, new Comparator<MediaMetadataCompat>() {
+                @Override
+                public int compare(MediaMetadataCompat lhs, MediaMetadataCompat rhs) {
+                    return Integer.parseInt(lhs.getDescription().getDescription().toString())
+                            - Integer.parseInt(rhs.getDescription().getDescription().toString());
+                }
+            });
             /*errorView.setText("");
             errorView.setVisibility(View.GONE);
             musiclist_recyclerView.setVisibility(View.VISIBLE);*/

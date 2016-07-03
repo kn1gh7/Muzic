@@ -14,7 +14,7 @@ import com.knight.knight.muzic.R;
  */
 public class MusicListViewHolder extends RecyclerView.ViewHolder {
     public RelativeLayout music_item_parent;
-    public TextView title, displayName, albumName;
+    public TextView title, displayName, albumName, albumDuration;
     public ImageView albumPhoto;
 
     public MusicListViewHolder(View view) {
@@ -24,6 +24,7 @@ public class MusicListViewHolder extends RecyclerView.ViewHolder {
         title = (TextView) view.findViewById(R.id.title);
         displayName = (TextView) view.findViewById(R.id.display_name);
         albumName = (TextView) view.findViewById(R.id.album_name);
+        albumDuration = (TextView) view.findViewById(R.id.album_duration);
         albumPhoto = (ImageView) view.findViewById(R.id.album_photo);
     }
 }

@@ -22,6 +22,7 @@ public class MediaPlayerPlaybackManager implements PlaybackManager,
     MediaPlayer mPlayer;
     LogHelper logHelper;
     MediaSessionCallbackManager mCallback;
+    int currentPlayingPosition;
 
     public MediaPlayerPlaybackManager(Context context, MediaSessionCallbackManager callback) {
         mContext = context;
@@ -30,11 +31,13 @@ public class MediaPlayerPlaybackManager implements PlaybackManager,
     }
 
     private void initializePlayer() { //Sets Player to idle state
-        if (mPlayer == null) {
+        if (mPlayer == null) { //Creating player for First Time or after a stop
             mPlayer = new MediaPlayer();
             mPlayer.setOnCompletionListener(this);
             mPlayer.setOnPreparedListener(this);
             mPlayer.setOnErrorListener(this);
+        } else { //When Changing Media just reset sets MediaPlayer to Ideal State.
+            mPlayer.reset();
         }
     }
 
@@ -49,9 +52,6 @@ public class MediaPlayerPlaybackManager implements PlaybackManager,
 
     private void playNewMediaId(String mediaId) {
         logHelper.loge("onPlayFromMediaId");
-        if (mPlayer != null) {
-            handleStopPlayback();
-        }
 
         initializePlayer();
         setPlayer(mediaId);
@@ -67,6 +67,7 @@ public class MediaPlayerPlaybackManager implements PlaybackManager,
     public void handlePausePlayback() {
         if (mPlayer != null && mPlayer.isPlaying()) {
             mPlayer.pause();
+            currentPlayingPosition = mPlayer.getCurrentPosition();
             mCallback.onPlaybackPaused();
         }
     }
@@ -86,7 +87,6 @@ public class MediaPlayerPlaybackManager implements PlaybackManager,
     @Override
     public void onCompletion(MediaPlayer mp) {
         logHelper.loge("onCompletion");
-        handleStopPlayback();
 
         mCallback.onPlaybackCompleted();
     }
@@ -109,11 +109,6 @@ public class MediaPlayerPlaybackManager implements PlaybackManager,
 
     @Override
     public void play() {
-        if (mPlayer == null) {
-            handleStopPlayback();
-            return;
-        }
-
         handleStartPlayback();
     }
 

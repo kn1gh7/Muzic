@@ -13,7 +13,6 @@ import android.support.v4.media.MediaDescriptionCompat;
 import android.support.v4.media.session.MediaControllerCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.support.v7.widget.RecyclerView;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -110,9 +109,7 @@ public class MusicListAdapter extends RecyclerView.Adapter<MusicListViewHolder> 
                 art = BitmapFactory.decodeByteArray(rawArt, 0, rawArt.length, bfo);
 
                 holder.albumPhoto.setImageBitmap(art);
-                Log.i("Art ", "Not Null");
             } else {
-                Log.i("Art ", "Null");
                 Bitmap dummyBitmap = BitmapFactory.decodeResource(context.getResources(),
                         R.drawable.dummy);
                 holder.albumPhoto.setImageBitmap(dummyBitmap);
